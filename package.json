@@ -1,0 +1,14 @@
+{
+  "name": "spotify-now-playing-webhook",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Polls Spotify's currently-playing endpoint and POSTs a webhook on every track change.",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "authorize": "node src/authorize.ts",
+    "start": "node src/poll.ts"
+  }
+}

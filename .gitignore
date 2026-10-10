@@ -1,0 +1,7 @@
+.env
+.tokens.json
+node_modules/
+bpm.db
+bpm.db-journal
+bpm.db-wal
+bpm.db-shm
