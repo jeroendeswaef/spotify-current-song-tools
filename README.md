@@ -69,7 +69,12 @@ change. Pausing deliberately leaves the last song on screen rather than
 clearing it — stopping playback entirely just resets the dedupe, so the same
 song re-sends if you start it again.
 
-Override the target with `WEBHOOK_URL` and the token with `LEDCTRL_TOKEN`.
+While `updateLedMatrix` is on, it also sends `POST /health` (same host as
+`WEBHOOK_URL`, same bearer token, no body) every 3 seconds as a heartbeat. The
+log only notes when health flips between ok and failing.
+
+Override the target with `WEBHOOK_URL`, the heartbeat with `LEDCTRL_HEALTH_URL`,
+and the token with `LEDCTRL_TOKEN`.
 
 ## BPM
 

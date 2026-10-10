@@ -19,7 +19,7 @@ import {
 } from './store.ts'
 import { startTapTempo, type TapResult } from './taptempo.ts'
 import { getAccessToken, invalidateAccessToken } from './tokens.ts'
-import { postWebhook, type NowPlayingEvent } from './webhook.ts'
+import { postWebhook, startHealthPing, type NowPlayingEvent } from './webhook.ts'
 
 const ENDPOINT =
   'https://api.spotify.com/v1/me/player/currently-playing?additional_types=track,episode'
@@ -331,6 +331,8 @@ async function main(): Promise<void> {
     `polling every ${POLL_MS}ms → ` +
       (UPDATE_LED_MATRIX ? target : 'log only (updateLedMatrix off)'),
   )
+
+  startHealthPing()
 
   const stored = countStored()
   if (stored !== null) console.log(`bpm store: ${stored} tracks in ${DB_PATH}`)

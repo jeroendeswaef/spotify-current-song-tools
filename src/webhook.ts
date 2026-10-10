@@ -3,7 +3,7 @@
  *
  *   POST http://ledctrl.local:8080/now-playing
  *   Authorization: Bearer <token>
- *   {"title": "...", "artist": "..."}
+ *   {"title": "...", "artist": "...", "bpm": 110}   // bpm only when known
  */
 
 import { UPDATE_LED_MATRIX } from './config.ts'
@@ -40,7 +40,7 @@ export type NowPlayingEvent = {
 }
 
 /**
- * POSTs {title, artist}. Retries on network errors and 5xx; a 4xx is a config
+ * POSTs {title, artist, bpm?}. Retries on network errors and 5xx; a 4xx is a config
  * problem (bad token, wrong path) and won't fix itself, so it fails fast.
  */
 export async function postWebhook(event: NowPlayingEvent): Promise<void> {
@@ -112,4 +112,46 @@ export async function postWebhook(event: NowPlayingEvent): Promise<void> {
     if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 1000))
   }
   console.error('ledctrl giving up on:', line)
+}
+
+const HEALTH_MS = 3_000
+
+/** POST <ledctrl>/health, on the same host as WEBHOOK_URL unless overridden. */
+const HEALTH_URL =
+  process.env.LEDCTRL_HEALTH_URL ?? (WEBHOOK_URL ? new URL('/health', WEBHOOK_URL).href : undefined)
+
+/**
+ * Heartbeats ledctrl every 3s while updateLedMatrix is on. Logs only when the
+ * state flips (first result, ok → failing, failing → ok) so it doesn't spam.
+ * Chained timeouts rather than setInterval, so a slow ledctrl can't pile up
+ * overlapping requests.
+ */
+export function startHealthPing(): void {
+  if (!UPDATE_LED_MATRIX || !HEALTH_URL) return
+  const url = HEALTH_URL
+
+  let healthy: boolean | null = null
+  const report = (ok: boolean, detail: string) => {
+    if (ok === healthy) return
+    healthy = ok
+    if (ok) console.log('ledctrl health: ok')
+    else console.error(`ledctrl health: failing (${detail})`)
+  }
+
+  const ping = async () => {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${TOKEN}` },
+        signal: AbortSignal.timeout(HEALTH_MS),
+      })
+      // Discard the body so the connection can be reused.
+      await res.body?.cancel()
+      report(res.ok, `HTTP ${res.status}`)
+    } catch (err) {
+      report(false, sanitizeForLog((err as Error).message))
+    }
+    setTimeout(ping, HEALTH_MS)
+  }
+  void ping()
 }
