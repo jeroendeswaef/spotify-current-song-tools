@@ -7,7 +7,7 @@
  *
  *   GET https://api.deezer.com/track/isrc:USUM71703861
  */
-import { sanitizeForLog } from './log.ts'
+import { describeError, sanitizeForLog } from './log.ts'
 
 /**
  * ISRC is a fixed 12-character code: 2-letter country, 3-char registrant,
@@ -77,8 +77,7 @@ export async function lookupBpm(isrc: string | null): Promise<BpmResult> {
       definitive = false
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'lookup failed'
-    console.warn(`bpm: lookup failed for ${key}: ${sanitizeForLog(message)}`)
+    console.warn(`bpm: lookup failed for ${key}: ${describeError(err)}`)
     result = missing('lookup failed')
     definitive = false
   }

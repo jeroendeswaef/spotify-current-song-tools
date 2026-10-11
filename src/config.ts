@@ -20,7 +20,13 @@ function loadDotEnv(): void {
     if (!match) continue
     const [, key, rest] = match
     if (process.env[key] !== undefined) continue // real env wins
-    process.env[key] = rest.trim().replace(/^(['"])(.*)\1$/s, '$2')
+
+    const value = rest.trim().replace(/^(['"])(.*)\1$/s, '$2')
+    // A commented-out-style `KEY=` means "leave it unset". Assigning '' here
+    // would defeat every `process.env.X ?? default` downstream — an empty
+    // string is not nullish, so the default would never apply.
+    if (value === '') continue
+    process.env[key] = value
   }
 }
 
@@ -52,8 +58,8 @@ export const REDIRECT_URI =
  * :8084. Set AUTH_HOST=0.0.0.0 if the mapping is a LAN port-forward rather than
  * a tunnel client running on this machine.
  */
-export const AUTH_PORT = Number(process.env.AUTH_PORT ?? 8084)
-export const AUTH_HOST = process.env.AUTH_HOST ?? '127.0.0.1'
+export const AUTH_PORT = Number(process.env.AUTH_PORT || 8084)
+export const AUTH_HOST = process.env.AUTH_HOST || '127.0.0.1'
 
 /**
  * Reads a boolean option from either `--name` / `--name=false` / `--no-name` on

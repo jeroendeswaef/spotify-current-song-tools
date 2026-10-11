@@ -13,7 +13,9 @@ import { join } from 'node:path'
 import { ROOT } from './config.ts'
 import { sanitizeForLog } from './log.ts'
 
-export const DB_PATH = process.env.BPM_DB ?? join(ROOT, 'bpm.db')
+// `||`, not `??`: an empty BPM_DB must fall back, because SQLite accepts ''
+// as a throwaway temporary database and would silently lose every row.
+export const DB_PATH = process.env.BPM_DB || join(ROOT, 'bpm.db')
 
 export type BpmSource = 'deezer' | 'manual tap'
 export type StoredBpm = { bpm: number; source: BpmSource; verified: boolean }

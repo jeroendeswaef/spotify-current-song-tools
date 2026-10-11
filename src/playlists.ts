@@ -11,7 +11,7 @@
  * reports it as unconfigured.
  */
 import './config.ts' // loads .env before the ids are read
-import { sanitizeForLog } from './log.ts'
+import { describeError } from './log.ts'
 import { getAccessToken } from './tokens.ts'
 
 export type Band = { id: string | null; env: string; name: string; min: number; max: number }
@@ -99,8 +99,7 @@ async function loadMembers(playlistId: string): Promise<Set<string> | null> {
       url = page.next ?? ''
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'read failed'
-    warnDedupeUnavailable(sanitizeForLog(message))
+    warnDedupeUnavailable(describeError(err))
     return null
   }
 
@@ -189,7 +188,6 @@ export async function addTrackToPlaylist(
     remember(playlistId, trackId)
     return { status: 'added' }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'request failed'
-    return { status: 'failed', detail: sanitizeForLog(message) }
+    return { status: 'failed', detail: describeError(err) }
   }
 }

@@ -7,7 +7,7 @@
 import { lookupBpm } from './bpm.ts'
 import { UPDATE_LED_MATRIX } from './config.ts'
 import { fetchIsrc } from './isrc.ts'
-import { sanitizeForLog } from './log.ts'
+import { describeError, sanitizeForLog } from './log.ts'
 import { addTrackToPlaylist, BANDS, bandForBpm, preloadPlaylists, savedIn } from './playlists.ts'
 import {
   countStored,
@@ -24,8 +24,8 @@ import { postWebhook, startHealthPing, type NowPlayingEvent } from './webhook.ts
 const ENDPOINT =
   'https://api.spotify.com/v1/me/player/currently-playing?additional_types=track,episode'
 
-const POLL_MS = Number(process.env.POLL_INTERVAL_MS ?? 5000)
-const IDLE_MS = Number(process.env.IDLE_INTERVAL_MS ?? 15000)
+const POLL_MS = Number(process.env.POLL_INTERVAL_MS || 5000)
+const IDLE_MS = Number(process.env.IDLE_INTERVAL_MS || 15000)
 
 type State = { id: string | null; isPlaying: boolean; progressMs: number }
 let last: State | null = null
@@ -361,7 +361,7 @@ async function main(): Promise<void> {
     try {
       delay = await tick()
     } catch (err) {
-      console.error('poll failed:', (err as Error).message)
+      console.error('poll failed:', describeError(err))
     }
     await new Promise((r) => setTimeout(r, delay))
   }

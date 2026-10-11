@@ -7,7 +7,7 @@
  * `external_ids` from /me/player/currently-playing comes back from
  * /v1/tracks/{id} with {"isrc": "..."}.
  */
-import { sanitizeForLog } from './log.ts'
+import { describeError } from './log.ts'
 import { getAccessToken } from './tokens.ts'
 
 /** Spotify IDs are 22-character base62, validated before reaching the path. */
@@ -45,8 +45,7 @@ export async function fetchIsrc(trackId: string | null): Promise<string | null> 
       definitive = false
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'lookup failed'
-    console.warn(`isrc: lookup failed for track ${trackId}: ${sanitizeForLog(message)}`)
+    console.warn(`isrc: lookup failed for track ${trackId}: ${describeError(err)}`)
     definitive = false
   }
 
