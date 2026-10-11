@@ -150,6 +150,8 @@ function applyOverride(): void {
     `override: ${lastTap.bpm} bpm, manual tap (was ${was}), ` +
       `${saved ? 'saved' : 'this session only — store unavailable'}  ${currentSongLabel()}`,
   )
+  // Re-push so the panel picks up the now-verified BPM without waiting for the next song.
+  void postWebhook(currentEvent)
 }
 
 /** `v`: vouch for the BPM currently on record for this song. */
@@ -176,6 +178,7 @@ function applyVerify(): void {
   console.log(
     `verify: ${currentEvent.bpm} bpm, ${currentEvent.bpmSource}, verified  ${currentSongLabel()}`,
   )
+  void postWebhook(currentEvent)
 }
 
 /** `p`: file the current song into the playlist for its tempo band. */

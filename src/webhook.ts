@@ -3,7 +3,7 @@
  *
  *   POST http://ledctrl.local:8080/now-playing
  *   Authorization: Bearer <token>
- *   {"title": "...", "artist": "...", "bpm": 110}   // bpm only when known
+ *   {"title": "...", "artist": "...", "bpm": 110}   // bpm only when known and verified
  */
 
 import { UPDATE_LED_MATRIX } from './config.ts'
@@ -40,20 +40,21 @@ export type NowPlayingEvent = {
 }
 
 /**
- * POSTs {title, artist, bpm?}. Retries on network errors and 5xx; a 4xx is a config
+ * POSTs {title, artist, bpm?}. The BPM is only sent once verified, so the panel
+ * never shows an unconfirmed Deezer guess. Retries on network errors and 5xx; a 4xx is a config
  * problem (bad token, wrong path) and won't fix itself, so it fails fast.
  */
 export async function postWebhook(event: NowPlayingEvent): Promise<void> {
   const payload = {
     title: event.name ?? '',
     artist: event.artists.join(', '),
-    // Omitted entirely when unknown, rather than sent as 0 or null.
-    ...(event.bpm !== null && { bpm: event.bpm }),
+    // Omitted entirely when unknown or unverified, rather than sent as 0 or null.
+    ...(event.bpm !== null && event.bpmVerified && { bpm: event.bpm }),
   }
   const suffix =
     event.bpm !== null
       ? ` [${event.bpm} bpm, ${event.bpmSource ?? 'unknown source'}` +
-        `${event.bpmVerified ? ', verified' : ''}]`
+        `${event.bpmVerified ? ', verified' : ', unverified — not sent'}]`
       : ` [no bpm: ${event.bpmReason ?? 'unknown'}]`
 
   // Only tracks can be filed, so don't nag about podcasts or local files.
