@@ -7,7 +7,7 @@
  */
 
 import { UPDATE_LED_MATRIX } from './config.ts'
-import { sanitizeForLog } from './log.ts'
+import { describeError, sanitizeForLog } from './log.ts'
 
 const WEBHOOK_URL = process.env.WEBHOOK_URL
 
@@ -108,7 +108,7 @@ export async function postWebhook(event: NowPlayingEvent): Promise<void> {
       }
       console.error(`ledctrl ${res.status}, attempt ${attempt}/3`)
     } catch (err) {
-      console.error(`ledctrl error, attempt ${attempt}/3:`, (err as Error).message)
+      console.error(`ledctrl error, attempt ${attempt}/3:`, describeError(err))
     }
     if (attempt < 3) await new Promise((r) => setTimeout(r, attempt * 1000))
   }
@@ -150,7 +150,7 @@ export function startHealthPing(): void {
       await res.body?.cancel()
       report(res.ok, `HTTP ${res.status}`)
     } catch (err) {
-      report(false, sanitizeForLog((err as Error).message))
+      report(false, describeError(err))
     }
     setTimeout(ping, HEALTH_MS)
   }

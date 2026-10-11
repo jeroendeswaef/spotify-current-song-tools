@@ -27,6 +27,9 @@ const ENDPOINT =
 const POLL_MS = Number(process.env.POLL_INTERVAL_MS || 5000)
 const IDLE_MS = Number(process.env.IDLE_INTERVAL_MS || 15000)
 
+/** Ceiling for the retry backoff, so a long outage still rechecks regularly. */
+const MAX_BACKOFF_MS = 30_000
+
 type State = { id: string | null; isPlaying: boolean; progressMs: number }
 let last: State | null = null
 
@@ -359,12 +362,31 @@ async function main(): Promise<void> {
       '`j` tap bpm · `o` apply · `v` verify · `p` add to tempo playlist — ctrl-c to quit',
     )
   }
+  // Flaky links (cellular especially) fail in bursts. Back off so a dead
+  // network isn't hammered, but start short so a brief blip costs one poll
+  // rather than a whole song, and stay quiet while the error is unchanged.
+  let failures = 0
+  let lastFailure: string | null = null
+
   for (;;) {
     let delay = IDLE_MS
     try {
       delay = await tick()
+      if (failures > 0) {
+        console.log(`polling recovered after ${failures} failed ${failures === 1 ? 'try' : 'tries'}`)
+        failures = 0
+        lastFailure = null
+      }
     } catch (err) {
-      console.error('poll failed:', describeError(err))
+      failures++
+      const described = describeError(err)
+      if (described !== lastFailure) {
+        console.error(`poll failed: ${described}`)
+        lastFailure = described
+      } else if (failures === 2) {
+        console.error('poll failed: same error repeating — staying quiet until it changes')
+      }
+      delay = Math.min(POLL_MS * 2 ** (failures - 1), MAX_BACKOFF_MS)
     }
     await new Promise((r) => setTimeout(r, delay))
   }
