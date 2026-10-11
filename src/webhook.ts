@@ -121,17 +121,32 @@ const HEALTH_MS = 3_000
 const HEALTH_URL =
   process.env.LEDCTRL_HEALTH_URL ?? (WEBHOOK_URL ? new URL('/health', WEBHOOK_URL).href : undefined)
 
-/**
- * Heartbeats ledctrl every 3s while updateLedMatrix is on. Logs only when the
- * state flips (first result, ok → failing, failing → ok) so it doesn't spam.
- * Chained timeouts rather than setInterval, so a slow ledctrl can't pile up
- * overlapping requests.
- */
-export function startHealthPing(): void {
-  if (!UPDATE_LED_MATRIX || !HEALTH_URL) return
-  const url = HEALTH_URL
+let healthy: boolean | null = null
+let healthTimer: ReturnType<typeof setTimeout> | null = null
+/** Bumped on every start/stop, so a ping still in flight from before can't reschedule itself. */
+let healthRun = 0
 
-  let healthy: boolean | null = null
+/**
+ * Heartbeats ledctrl every 3s while updateLedMatrix is on and Spotify is
+ * actually playing. Logs only when the state flips (first result, ok →
+ * failing, failing → ok) so it doesn't spam. Chained timeouts rather than
+ * setInterval, so a slow ledctrl can't pile up overlapping requests.
+ */
+export function setHealthPing(playing: boolean): void {
+  if (!UPDATE_LED_MATRIX || !HEALTH_URL) return
+  if (playing === (healthTimer !== null)) return
+  const url = HEALTH_URL
+  const run = ++healthRun
+
+  if (!playing) {
+    clearTimeout(healthTimer ?? undefined)
+    healthTimer = null
+    // Forget the last result, so resuming logs the health afresh.
+    healthy = null
+    console.log('ledctrl health: paused (nothing playing)')
+    return
+  }
+
   const report = (ok: boolean, detail: string) => {
     if (ok === healthy) return
     healthy = ok
@@ -148,11 +163,14 @@ export function startHealthPing(): void {
       })
       // Discard the body so the connection can be reused.
       await res.body?.cancel()
+      if (run !== healthRun) return
       report(res.ok, `HTTP ${res.status}`)
     } catch (err) {
+      if (run !== healthRun) return
       report(false, describeError(err))
     }
-    setTimeout(ping, HEALTH_MS)
+    if (run === healthRun) healthTimer = setTimeout(ping, HEALTH_MS)
   }
-  void ping()
+  // Marks the heartbeat as running straight away; the first ping goes out now.
+  healthTimer = setTimeout(ping, 0)
 }
