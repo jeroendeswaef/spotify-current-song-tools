@@ -35,9 +35,10 @@ let last: State | null = null
 
 /**
  * Last track id actually pushed to the display. The display shows a song, so it
- * only needs updating when the song changes — not on pause/resume of the same
- * track, and not on a replay of it. Pausing deliberately leaves the last song
- * on screen rather than clearing it.
+ * only needs updating when the song changes — not on a replay of the same
+ * track. Resuming after a pause re-sends it (see tick()), since the heartbeat
+ * stops while paused. Pausing deliberately leaves the last song on screen
+ * rather than clearing it.
  */
 let lastSentId: string | null = null
 
@@ -327,9 +328,16 @@ async function tick(): Promise<number> {
     event = 'replay'
   }
 
+  const resumed = last?.id === next.id && !last.isPlaying && next.isPlaying
   last = next
   setHealthPing(next.isPlaying)
-  if (event === 'now_playing') await display(toEvent(body, event), next.id)
+  if (resumed && currentEvent?.id === next.id) {
+    // The heartbeat is off while paused, so put the song back on the display.
+    // Re-sends the event as it stands, keeping any override or verify from this run.
+    await postWebhook(currentEvent)
+  } else if (event === 'now_playing') {
+    await display(toEvent(body, event), next.id)
+  }
   return POLL_MS
 }
 

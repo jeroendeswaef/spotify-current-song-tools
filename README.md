@@ -63,11 +63,11 @@ chars, so the log line shows the truncated form:
 displayed: Jonathan Stout and his Campus Fi — Singin on Nothin
 ```
 
-**When it fires:** only when the *song* changes. Pause and resume of the same
-track, a replay of it, and ad breaks send nothing, since the display would not
-change. Pausing deliberately leaves the last song on screen rather than
-clearing it — stopping playback entirely just resets the dedupe, so the same
-song re-sends if you start it again.
+**When it fires:** when the *song* changes, and when playback resumes after a
+pause or stop (the heartbeat is off in between, so the song is sent again). A
+replay of the same track and ad breaks send nothing, since the display would
+not change. Pausing deliberately leaves the last song on screen rather than
+clearing it.
 
 While `updateLedMatrix` is on and Spotify is playing, it also sends
 `POST /health` (same host as `WEBHOOK_URL`, same bearer token, no body) every
