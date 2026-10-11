@@ -1,4 +1,6 @@
+import dns from 'node:dns'
 import { readFileSync } from 'node:fs'
+import net from 'node:net'
 import { join } from 'node:path'
 
 export const ROOT = join(import.meta.dirname, '..')
@@ -88,6 +90,24 @@ function boolOption(flag: string, envVar: string, fallback: boolean): boolean {
  *   UPDATE_LED_MATRIX=false npm start
  */
 export const UPDATE_LED_MATRIX = boolOption('updateLedMatrix', 'UPDATE_LED_MATRIX', true)
+
+/**
+ * Forces outbound connections onto IPv4.
+ *
+ * api.spotify.com publishes both A and AAAA records, and Node's Happy Eyeballs
+ * races them. On mobile networks the IPv6 path is often advertised but
+ * black-holed, which surfaces as an AggregateError with code ETIMEDOUT. Setting
+ * this skips the IPv6 attempt entirely.
+ *
+ *   node src/poll.ts --ipv4
+ *   FORCE_IPV4=1 npm start
+ */
+export const FORCE_IPV4 = boolOption('ipv4', 'FORCE_IPV4', false)
+
+if (FORCE_IPV4) {
+  dns.setDefaultResultOrder('ipv4first')
+  net.setDefaultAutoSelectFamily(false)
+}
 
 /**
  * The playlist scopes are only needed for the `p` key (filing a song into its
